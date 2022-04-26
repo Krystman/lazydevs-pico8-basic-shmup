@@ -21,6 +21,14 @@ function _init()
  score=10000
  
  lives=3
+
+ starx={}
+ stary={}
+ for i=1,100 do
+  add(starx,flr(rnd(128)))
+  add(stary,flr(rnd(128)))
+ end
+ 
 end
 
 function _update()
@@ -78,7 +86,8 @@ function _update()
 end
 
 function _draw()
- cls(0) 
+ cls(0)
+ starfield()
  spr(shipspr,shipx,shipy)
  spr(flamespr,shipx,shipy+8)
  
@@ -97,15 +106,20 @@ function _draw()
   else
    spr(14,i*9-8,1)
   end 
-  print(i)
  end
-
- print(i)
+ 
 end
 
 
 
 
+-->8
+function starfield()
+ for i=1,#starx do
+  pset(starx[i],stary[i],7)
+ end
+ 
+end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
 000000000028820000288200002882000000000000077000000770000007700000c77c0000077000000000000000000000000000888888888008800800000000
