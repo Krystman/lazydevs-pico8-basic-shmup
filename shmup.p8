@@ -55,42 +55,45 @@ function startgame()
  
  lives=3
 
- starx={}
- stary={}
- starspd={}
+ stars={} 
  for i=1,100 do
-  add(starx,flr(rnd(128)))
-  add(stary,flr(rnd(128)))
-  add(starspd,rnd(1.5)+0.5)
- end
-
+  local newstar={}
+  newstar.x=flr(rnd(128))
+  newstar.y=flr(rnd(128))
+  newstar.spd=rnd(1.5)+0.5
+  add(stars,newstar)
+ end 
+  
+ buls={}
 end
 
 -->8
 -- tools
 
 function starfield()
- for i=1,#starx do
+ 
+ for i=1,#stars do
+  local mystar=stars[i]
   local scol=6
   
-  if starspd[i]<1 then
- 	 scol=1
-  elseif starspd[i]<1.5 then
+  if mystar.spd<1 then
+   scol=1
+  elseif mystar.spd<1.5 then
    scol=13
-  end
+  end   
   
-  pset(starx[i],stary[i],scol)
+  pset(mystar.x,mystar.y,scol)
  end
 end
 
 function animatestars()
- for i=1,#stary do
-  local sy=stary[i]
-  sy=sy+starspd[i]
-  if sy>128 then
-   sy=sy-128
+ 
+ for i=1,#stars do
+  local mystar=stars[i]
+  mystar.y=mystar.y+mystar.spd
+  if mystar.y>128 then
+   mystar.y=mystar.y-128
   end
-  stary[i]=sy
  end
 
 end
@@ -133,8 +136,11 @@ function update_game()
  end
  
  if btnp(5) then
-  bulx=shipx
-  buly=shipy-3
+  local newbul={}
+  newbul.x=shipx
+  newbul.y=shipy-3
+  add(buls,newbul)
+  
   sfx(0)
   muzzle=6
  end
@@ -143,8 +149,15 @@ function update_game()
  shipx=shipx+shipsx
  shipy=shipy+shipsy
  
- --move the bullet
- buly=buly-4
+ --move the bullets
+ for i=#buls,1,-1 do
+  local mybul=buls[i]
+  mybul.y=mybul.y-4
+  
+  if mybul.y<-8 then
+   del(buls,mybul)
+  end
+ end
  
  --animate flame
  flamespr=flamespr+1
@@ -188,7 +201,10 @@ function draw_game()
  spr(shipspr,shipx,shipy)
  spr(flamespr,shipx,shipy+8)
  
- spr(16,bulx,buly)
+ for i=1,#buls do
+  local mybul=buls[i]
+  spr(16,mybul.x,mybul.y)
+ end
  
  if muzzle>0 then
   circfill(shipx+3,shipy-2,muzzle,7)
@@ -205,11 +221,13 @@ function draw_game()
   end 
  end
  
+ print(#buls,5,5,7)
 end
 
 function draw_start()
  --print(blink())
  cls(1)
+ 
  print("my awesome shmup",34,40,12) 
  print("press any key to start",20,80,blink())
 end
