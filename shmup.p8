@@ -2,8 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 36
 __lua__
 -- todo
--- -explosion
--- -hit reaction
+-- -proc explosion
+-- -bullet collision fx
 
 function _init()
  --this will clear the screen
@@ -77,7 +77,7 @@ function startgame()
  
  enemies={}
  
- explods={}
+ parts={}
  
  spawnen()
 end
@@ -158,11 +158,34 @@ function spawnen()
 end
 
 function explode(expx,expy)
- local myex={}
- myex.x=expx
- myex.y=expy
- myex.age=1
- add(explods,myex)
+ 
+ local myp={}
+ myp.x=expx
+ myp.y=expy
+ 
+ myp.sx=0
+ myp.sy=0
+ 
+ myp.age=0
+ myp.size=8
+ myp.maxage=0
+ add(parts,myp)
+	  
+ for i=1,30 do
+	 local myp={}
+	 myp.x=expx
+	 myp.y=expy
+	 
+	 myp.sx=rnd()*6-3
+	 myp.sy=rnd()*6-3
+	 
+	 myp.age=rnd(2)
+	 myp.size=1+rnd(4)
+	 myp.maxage=10+rnd(10)
+	 
+	 add(parts,myp)
+ end
+ 
 end
 -->8
 --update
@@ -259,7 +282,7 @@ function update_game()
      sfx(2)
      score+=1
      spawnen()
-     explode(myen.x,myen.y)
+     explode(myen.x+4,myen.y+4)
     end
    end
   end
@@ -348,22 +371,44 @@ function draw_game()
   circfill(ship.x+3,ship.y-2,muzzle,7)
  end
  
- --drawing bullets
- local exframes={64,64,66,68,70,70,72,72}
- for myex in all(explods) do
+ --drawing particles
+ for myp in all(parts) do
+  local pc=7
   
-  local myspr=myex.age
-  myspr=flr(myspr)
-  myspr=exframes[myspr]
-  
-  spr(myspr,myex.x-4,myex.y-4,2,2)
-  myex.age+=1
-  if myex.age>#exframes then
-   del(explods,myex)
+  if myp.age>5 then
+   pc=10
   end
+  if myp.age>7 then
+   pc=9
+  end
+  if myp.age>10 then
+   pc=8
+  end
+  if myp.age>12 then
+   pc=2
+  end
+  if myp.age>15 then
+   pc=5
+  end
+  
+  circfill(myp.x,myp.y,myp.size,pc)
+  
+  myp.x+=myp.sx
+  myp.y+=myp.sy
+  
+  myp.sx=myp.sx*0.85
+  myp.sy=myp.sy*0.85
+  
+  myp.age+=1
+  
+  if myp.age>myp.maxage then
+   myp.size-=0.5
+   if myp.size<0 then
+    del(parts,myp)
+   end
+  end
+  
  end
- 
- 
  
  print("score:"..score,40,1,12)
  
