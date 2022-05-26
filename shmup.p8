@@ -4,12 +4,45 @@ __lua__
 function _init()
  --this will clear the screen
  cls(0)
+
+ mode="start"
+ blinkt=1
+end
+
+function _update()
+ blinkt+=1
+ 
+ if mode=="game" then
+  update_game()
+ elseif mode=="start" then
+  update_start()
+ elseif mode=="over" then
+  update_over()
+ end
+ 
+end
+
+function _draw()
+
+ if mode=="game" then
+  draw_game()
+ elseif mode=="start" then
+  draw_start()
+ elseif mode=="over" then
+  draw_over()
+ end
+ 
+end
+
+function startgame()
+ mode="game"
+ 
  shipx=64
  shipy=64
  
  shipsx=0
  shipsy=0
- 
+
  shipspr=2
  flamespr=5
  
@@ -30,10 +63,51 @@ function _init()
   add(stary,flr(rnd(128)))
   add(starspd,rnd(1.5)+0.5)
  end
- 
+
 end
 
-function _update()
+-->8
+-- tools
+
+function starfield()
+ for i=1,#starx do
+  local scol=6
+  
+  if starspd[i]<1 then
+ 	 scol=1
+  elseif starspd[i]<1.5 then
+   scol=13
+  end
+  
+  pset(starx[i],stary[i],scol)
+ end
+end
+
+function animatestars()
+ for i=1,#stary do
+  local sy=stary[i]
+  sy=sy+starspd[i]
+  if sy>128 then
+   sy=sy-128
+  end
+  stary[i]=sy
+ end
+
+end
+
+function blink()
+ local banim={5,5,5,5,5,5,5,5,5,5,5,6,6,7,7,6,6,5}
+ 
+ if blinkt>#banim then
+  blinkt=1
+ end
+
+ return banim[blinkt]
+end
+-->8
+--update
+
+function update_game()
  --controls
  shipsx=0
  shipsy=0
@@ -53,6 +127,11 @@ function _update()
  if btn(3) then
   shipsy=2
  end
+
+ if btnp(4) then
+  mode="over"
+ end
+ 
  if btnp(5) then
   bulx=shipx
   buly=shipy-3
@@ -89,7 +168,21 @@ function _update()
  animatestars()
 end
 
-function _draw()
+function update_start()
+ if btnp(4) or btnp(5) then
+  startgame()
+ end
+end
+
+function update_over()
+ if btnp(4) or btnp(5) then
+  mode="start"
+ end
+end
+-->8
+-- draw
+
+function draw_game()
  cls(0)
  starfield()
  spr(shipspr,shipx,shipy)
@@ -114,34 +207,17 @@ function _draw()
  
 end
 
-
-
-
--->8
-function starfield()
- for i=1,#starx do
-  local scol=6
-  
-  if starspd[i]<1 then
- 	 scol=1
-  elseif starspd[i]<1.5 then
-   scol=13
-  end
-  
-  pset(starx[i],stary[i],scol)
- end
+function draw_start()
+ --print(blink())
+ cls(1)
+ print("my awesome shmup",34,40,12) 
+ print("press any key to start",20,80,blink())
 end
 
-function animatestars()
- for i=1,#stary do
-  local sy=stary[i]
-  sy=sy+starspd[i]
-  if sy>128 then
-   sy=sy-128
-  end
-  stary[i]=sy
- end
-
+function draw_over()
+ cls(8)
+ print("game over",48,40,2) 
+ print("press any key to continue",16,80,blink())
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
