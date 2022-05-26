@@ -2,8 +2,14 @@ pico-8 cartridge // http://www.pico-8.com
 version 36
 __lua__
 -- todo
--- -proc explosion
--- -bullet collision fx
+-- ------------
+-- game flow
+-- music
+-- multiple enemies
+-- big enemies
+-- enemy bullets
+
+
 
 function _init()
  --this will clear the screen
@@ -78,6 +84,8 @@ function startgame()
  enemies={}
  
  parts={}
+ 
+ shwaves={}
  
  spawnen()
 end
@@ -157,8 +165,8 @@ function spawnen()
  add(enemies,myen)
 end
 
-function explode(expx,expy)
- 
+function explode(expx,expy,isblue)
+
  local myp={}
  myp.x=expx
  myp.y=expy
@@ -167,8 +175,10 @@ function explode(expx,expy)
  myp.sy=0
  
  myp.age=0
- myp.size=8
+ myp.size=10
  myp.maxage=0
+ myp.blue=isblue
+ 
  add(parts,myp)
 	  
  for i=1,30 do
@@ -182,10 +192,115 @@ function explode(expx,expy)
 	 myp.age=rnd(2)
 	 myp.size=1+rnd(4)
 	 myp.maxage=10+rnd(10)
+	 myp.blue=isblue
 	 
 	 add(parts,myp)
  end
  
+ for i=1,20 do
+	 local myp={}
+	 myp.x=expx
+	 myp.y=expy
+	 
+	 myp.sx=(rnd()-0.5)*10
+	 myp.sy=(rnd()-0.5)*10
+	 
+	 myp.age=rnd(2)
+	 myp.size=1+rnd(4)
+	 myp.maxage=10+rnd(10)
+	 myp.blue=isblue
+	 myp.spark=true
+	 
+	 add(parts,myp)
+ end
+ 
+ big_shwave(expx,expy)
+ 
+end
+
+function page_red(page)
+ local col=7
+ 
+ if page>5 then
+  col=10
+ end
+ if page>7 then
+  col=9
+ end
+ if page>10 then
+  col=8
+ end
+ if page>12 then
+  col=2
+ end
+ if page>15 then
+  col=5
+ end
+ 
+ return col
+end
+
+function page_blue(page)
+ local col=7
+ 
+ if page>5 then
+  col=6
+ end
+ if page>7 then
+  col=12
+ end
+ if page>10 then
+  col=13
+ end
+ if page>12 then
+  col=1
+ end
+ if page>15 then
+  col=1
+ end
+ 
+ return col
+end
+
+function smol_shwave(shx,shy)
+ local mysw={}
+ mysw.x=shx
+ mysw.y=shy
+ mysw.r=3
+ mysw.tr=6
+ mysw.col=9
+ mysw.speed=1
+ add(shwaves,mysw)
+end
+
+function big_shwave(shx,shy)
+ local mysw={}
+ mysw.x=shx
+ mysw.y=shy
+ mysw.r=3
+ mysw.tr=25
+ mysw.col=7
+ mysw.speed=3.5
+ add(shwaves,mysw)
+end
+
+function smol_spark(sx,sy)
+ --for i=1,2 do
+ local myp={}
+ myp.x=sx
+ myp.y=sy
+ 
+ myp.sx=(rnd()-0.5)*8
+ myp.sy=(rnd()-1)*3
+ 
+ myp.age=rnd(2)
+ myp.size=1+rnd(4)
+ myp.maxage=10+rnd(10)
+ myp.blue=isblue
+ myp.spark=true
+ 
+ add(parts,myp)
+ --end
 end
 -->8
 --update
@@ -273,6 +388,8 @@ function update_game()
   for mybul in all(buls) do
    if col(myen,mybul) then
     del(buls,mybul)
+    smol_shwave(mybul.x+4,mybul.y+4)
+    smol_spark(myen.x+4,myen.y+4)
     myen.hp-=1
     sfx(3)
     myen.flash=2
@@ -292,6 +409,7 @@ function update_game()
  if invul<=0 then
 	 for myen in all(enemies) do
 	  if col(myen,ship) then
+    explode(ship.x+4,ship.y+4,true)
 	   lives-=1
 	   sfx(1)
 	   invul=60
@@ -371,27 +489,30 @@ function draw_game()
   circfill(ship.x+3,ship.y-2,muzzle,7)
  end
  
+ --drawing shwaves
+ for mysw in all(shwaves) do
+  circ(mysw.x,mysw.y,mysw.r,mysw.col)
+  mysw.r+=mysw.speed
+  if mysw.r>mysw.tr then
+   del(shwaves,mysw)
+  end
+ end
+ 
  --drawing particles
  for myp in all(parts) do
   local pc=7
-  
-  if myp.age>5 then
-   pc=10
-  end
-  if myp.age>7 then
-   pc=9
-  end
-  if myp.age>10 then
-   pc=8
-  end
-  if myp.age>12 then
-   pc=2
-  end
-  if myp.age>15 then
-   pc=5
+
+  if myp.blue then
+   pc=page_blue(myp.age)
+  else
+   pc=page_red(myp.age)
   end
   
-  circfill(myp.x,myp.y,myp.size,pc)
+  if myp.spark then
+   pset(myp.x,myp.y,7)
+  else
+   circfill(myp.x,myp.y,myp.size,pc)
+  end
   
   myp.x+=myp.sx
   myp.y+=myp.sy
