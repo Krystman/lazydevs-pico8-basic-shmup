@@ -24,9 +24,11 @@ function _init()
 
  starx={}
  stary={}
+ starspd={}
  for i=1,100 do
   add(starx,flr(rnd(128)))
   add(stary,flr(rnd(128)))
+  add(starspd,rnd(1.5)+0.5)
  end
  
 end
@@ -83,6 +85,8 @@ function _update()
  if shipx<0 then
   shipx=120
  end
+ 
+ animatestars()
 end
 
 function _draw()
@@ -116,9 +120,28 @@ end
 -->8
 function starfield()
  for i=1,#starx do
-  pset(starx[i],stary[i],7)
+  local scol=6
+  
+  if starspd[i]<1 then
+ 	 scol=1
+  elseif starspd[i]<1.5 then
+   scol=13
+  end
+  
+  pset(starx[i],stary[i],scol)
  end
- 
+end
+
+function animatestars()
+ for i=1,#stary do
+  local sy=stary[i]
+  sy=sy+starspd[i]
+  if sy>128 then
+   sy=sy-128
+  end
+  stary[i]=sy
+ end
+
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
