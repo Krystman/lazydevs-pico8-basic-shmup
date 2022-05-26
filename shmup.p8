@@ -1,15 +1,23 @@
 pico-8 cartridge // http://www.pico-8.com
 version 36
 __lua__
+-- todo
+-- -explosion
+-- -hit reaction
+
 function _init()
  --this will clear the screen
  cls(0)
 
  mode="start"
  blinkt=1
+ 
+ t=0
 end
 
 function _update()
+ t+=1
+ 
  blinkt+=1
  
  if mode=="game" then
@@ -36,9 +44,9 @@ end
 
 function startgame()
  mode="game"
+ t=0
  
  ship={}
- 
  ship.x=64
  ship.y=64
  ship.sx=0
@@ -47,14 +55,14 @@ function startgame()
  
  flamespr=5
  
- bulx=64
- buly=-10
+ bultimer=0
  
  muzzle=0
  
- score=10000
+ score=0
  
- lives=1
+ lives=4
+ invul=0
 
  stars={} 
  for i=1,100 do
@@ -69,12 +77,7 @@ function startgame()
  
  enemies={}
  
- local myen={}
- myen.x=60
- myen.y=5
- myen.spr=21
- 
- add(enemies,myen)
+ spawnen()
 end
 
 -->8
@@ -140,6 +143,15 @@ function col(a,b)
  
  return true
 end
+
+function spawnen()
+ local myen={}
+ myen.x=rnd(120)
+ myen.y=-8
+ myen.spr=21
+ 
+ add(enemies,myen)
+end
 -->8
 --update
 
@@ -164,16 +176,20 @@ function update_game()
   ship.sy=2
  end
   
- if btnp(5) then
-  local newbul={}
-  newbul.x=ship.x
-  newbul.y=ship.y-3
-  newbul.spr=16
-  add(buls,newbul)
-  
-  sfx(0)
-  muzzle=6
+ if btn(5) then
+  if bultimer<=0 then
+	  local newbul={}
+	  newbul.x=ship.x
+	  newbul.y=ship.y-3
+	  newbul.spr=16
+	  add(buls,newbul)
+	  
+	  sfx(0)
+	  muzzle=6
+	  bultimer=4
+  end
  end
+ bultimer-=1
  
  --moving the ship
  ship.x+=ship.sx
@@ -213,16 +229,34 @@ function update_game()
   
   if myen.y>128 then
    del(enemies,myen)
+   spawnen()
+  end
+ end
+ 
+ --collision enemy x bullets
+ for myen in all(enemies) do
+  for mybul in all(buls) do
+   if col(myen,mybul) then
+    del(enemies,myen)
+    del(buls,mybul)
+    sfx(2)
+    score+=1
+    spawnen()
+   end
   end
  end
  
  --collision ship x enemies
- for myen in all(enemies) do
-  if col(myen,ship) then
-   lives-=1
-   sfx(1)
-   del(enemies,myen)
-  end
+ if invul<=0 then
+	 for myen in all(enemies) do
+	  if col(myen,ship) then
+	   lives-=1
+	   sfx(1)
+	   invul=60
+	  end
+	 end
+ else
+  invul-=1
  end
  
  if lives<=0 then
@@ -262,8 +296,17 @@ end
 function draw_game()
  cls(0)
  starfield()
- drwmyspr(ship)
- spr(flamespr,ship.x,ship.y+8)
+
+ if invul<=0 then
+  drwmyspr(ship)
+  spr(flamespr,ship.x,ship.y+8)
+ else
+  --invul state
+  if sin(t/5)<0.1 then
+   drwmyspr(ship)
+   spr(flamespr,ship.x,ship.y+8)
+  end
+ end
  
  --drawing enemies
  for myen in all(enemies) do
@@ -325,3 +368,4 @@ __gfx__
 __sfx__
 000100003455032550305502e5502b550285502555022550205501b55018550165501355011550010000f5500c5500a5500855006550055500455003550015500055000000000000000000000000000100000000
 000100002b650366402d65025650206301d6201762015620116200f6100d6100a6100761005610046100361002610026000160000600006000060000600006000000000000000000000000000000000000000000
+00010000377500865032550206300d620085200862007620056100465004610026000260001600006200070000700006300060001600016200160001600016200070000700007000070000700007000070000700
