@@ -54,7 +54,7 @@ function startgame()
  
  score=10000
  
- lives=3
+ lives=1
 
  stars={} 
  for i=1,100 do
@@ -121,6 +121,25 @@ end
 function drwmyspr(myspr)
  spr(myspr.spr,myspr.x,myspr.y)
 end
+
+function col(a,b)
+ local a_left=a.x
+ local a_top=a.y
+ local a_right=a.x+7
+ local a_bottom=a.y+7
+ 
+ local b_left=b.x
+ local b_top=b.y
+ local b_right=b.x+7
+ local b_bottom=b.y+7
+
+ if a_top>b_bottom then return false end
+ if b_top>a_bottom then return false end
+ if a_left>b_right then return false end
+ if b_left>a_right then return false end
+ 
+ return true
+end
 -->8
 --update
 
@@ -144,11 +163,7 @@ function update_game()
  if btn(3) then
   ship.sy=2
  end
-
- if btnp(4) then
-  mode="over"
- end
- 
+  
  if btnp(5) then
   local newbul={}
   newbul.x=ship.x
@@ -163,6 +178,20 @@ function update_game()
  --moving the ship
  ship.x+=ship.sx
  ship.y+=ship.sy
+ 
+ --checking if we hit the edge
+ if ship.x>120 then
+  ship.x=120
+ end
+ if ship.x<0 then
+  ship.x=0
+ end
+ if ship.y<0 then
+  ship.y=0
+ end
+ if ship.y>120 then
+  ship.y=120
+ end
  
  --move the bullets
  for i=#buls,1,-1 do
@@ -187,6 +216,21 @@ function update_game()
   end
  end
  
+ --collision ship x enemies
+ for myen in all(enemies) do
+  if col(myen,ship) then
+   lives-=1
+   sfx(1)
+   del(enemies,myen)
+  end
+ end
+ 
+ if lives<=0 then
+  mode="over"
+  return
+ end
+ 
+ 
  --animate flame
  flamespr=flamespr+1
  if flamespr>9 then
@@ -197,15 +241,7 @@ function update_game()
  if muzzle>0 then
   muzzle=muzzle-1
  end
- 
- --checking if we hit the edge
- if ship.x>120 then
-  ship.x=0
- end
- if ship.x<0 then
-  ship.x=120
- end
- 
+  
  animatestars()
 end
 
@@ -245,7 +281,6 @@ function draw_game()
  
  print("score:"..score,40,1,12)
  
- lives=1
  for i=1,4 do
   if lives>=i then
    spr(13,i*9-8,1)
@@ -289,3 +324,4 @@ __gfx__
 00999900000000000000000000000000000000000300003030000003030000300330033000000000000000000000000000000000000000000000000000000000
 __sfx__
 000100003455032550305502e5502b550285502555022550205501b55018550165501355011550010000f5500c5500a5500855006550055500455003550015500055000000000000000000000000000100000000
+000100002b650366402d65025650206301d6201762015620116200f6100d6100a6100761005610046100361002610026000160000600006000060000600006000000000000000000000000000000000000000000
