@@ -6,7 +6,6 @@ __lua__
 -- nicer screens
 -- flexible collision detection
 
--- winning music
 -- even more enemies
 -- enemy behavior
 -- where do enemies spawn?
@@ -389,14 +388,17 @@ function update_game()
  
  --moving enemies 
  for myen in all(enemies) do
-  myen.y+=1
+  --enemy mission
+  doenemy(myen)
+  
+  --enemy animation
   myen.aniframe+=0.4
   if flr(myen.aniframe) > #myen.ani then
    myen.aniframe=1
   end
-  
   myen.spr=myen.ani[flr(myen.aniframe)]
   
+  --enemy leaving screen
   if myen.y>128 then
    del(enemies,myen)
   end
@@ -647,15 +649,47 @@ end
 
 function spawnwave()
  if wave==1 then
-  spawnen(1)
-  
+  placens({
+   {0,1,1,1,1,1,1,1,1,0},
+   {0,1,1,1,1,1,1,1,1,0},
+   {0,1,1,1,1,1,1,1,1,0},
+   {0,1,1,1,1,1,1,1,1,0}
+  })
  elseif wave==2 then
-  spawnen(2)
+  placens({
+   {1,1,2,2,1,1,2,2,1,1},
+   {1,1,2,2,1,1,2,2,1,1},
+   {1,1,2,2,2,2,2,2,1,1},
+   {1,1,2,2,2,2,2,2,1,1}
+  })
  elseif wave==3 then
-  spawnen(3)
+  placens({
+   {3,3,0,2,2,2,2,0,3,3},
+   {3,3,0,2,2,2,2,0,3,3},
+   {3,3,0,1,1,1,1,0,3,3},
+   {3,3,0,1,0,0,1,0,3,3}
+  })
  elseif wave==4 then
-  spawnen(4)
+  placens({
+   {0,0,0,0,0,0,0,0,0,0},
+   {0,0,0,0,4,0,0,0,0,0},
+   {0,0,0,0,0,0,0,0,0,0},
+   {0,0,0,0,0,0,0,0,0,0}
+  })
  end  
+end
+
+function placens(lvl)
+
+ for y=1,4 do
+  local myline=lvl[y]
+  for x=1,10 do
+   if myline[x]!=0 then
+    spawnen(myline[x],x*12-6,4+y*12)
+   end
+  end
+ end
+ 
 end
 
 function nextwave()
@@ -678,30 +712,35 @@ function nextwave()
 
 end
 
-function spawnen(entype)
+function spawnen(entype,enx,eny)
  local myen=makespr()
- myen.x=rnd(120)
- myen.y=-8
+ myen.x=enx
+ myen.y=eny-66
+ 
+ myen.posx=enx
+ myen.posy=eny
+
+ myen.mission="flyin"
  
  if entype==nil or entype==1 then
   -- green alien
   myen.spr=21
-  myen.hp=5
+  myen.hp=1
   myen.ani={21,22,23,24}
  elseif entype==2 then
   -- red flame guy
   myen.spr=148
-  myen.hp=5
+  myen.hp=1
   myen.ani={148,149}
  elseif entype==3 then
   -- spinning ship
   myen.spr=184
-  myen.hp=5
+  myen.hp=1
   myen.ani={184,185,186,187}
  elseif entype==4 then
   -- boss
   myen.spr=208
-  myen.hp=5
+  myen.hp=1
   myen.ani={208,210}
   myen.sprw=2
   myen.sprh=2
@@ -710,6 +749,24 @@ function spawnen(entype)
  end
   
  add(enemies,myen)
+end
+-->8
+--behavior
+
+function doenemy(myen)
+ if myen.mission=="flyin" then
+  --flying in
+  myen.y+=1
+  if myen.y>=myen.posy then
+   myen.mission="protec"
+  end
+  
+ elseif myen.mission=="protec" then
+  -- staying put
+ elseif myen.mission=="attac" then  
+  -- attac 
+ end
+  
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
