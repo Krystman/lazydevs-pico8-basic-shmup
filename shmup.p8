@@ -4,7 +4,11 @@ __lua__
 -- todo
 -- ------------
 -- enemy behavior
+
 -- enemy bullets
+-- pickups
+-- bomb?
+-- boss
 -- nicer screens
 
 function _init()
@@ -15,6 +19,7 @@ function _init()
  blinkt=1
  t=0
  lockout=0
+ 
 end
 
 function _update() 
@@ -81,7 +86,8 @@ function startgame()
  invul=0
  
  attacfreq=60
-
+ nextfire=0
+ 
  stars={} 
  for i=1,100 do
   local newstar={}
@@ -92,6 +98,7 @@ function startgame()
  end 
   
  buls={}
+ ebuls={}
  
  enemies={}
  
@@ -148,7 +155,13 @@ function drwmyspr(myspr)
  
  if myspr.shake>0 then
   myspr.shake-=1
-  sprx+=abs(sin(t/2.5))
+  if t%4<2 then
+   sprx+=1
+  end
+ end
+ if myspr.bulmode then
+  sprx-=2
+  spry-=2
  end
  
  spr(myspr.spr,sprx,spry,myspr.sprw,myspr.sprh)
@@ -361,6 +374,7 @@ function update_game()
 	  newbul.y=ship.y-3
 	  newbul.spr=16
 	  newbul.colw=6
+	  newbul.sy=-4
 	  add(buls,newbul)
 	  
 	  sfx(0)
@@ -389,14 +403,21 @@ function update_game()
  end
  
  --move the bullets
- for i=#buls,1,-1 do
-  local mybul=buls[i]
-  mybul.y=mybul.y-4
-  
+ for mybul in all(buls) do
+  move(mybul)
   if mybul.y<-8 then
    del(buls,mybul)
   end
  end
+ 
+ --move the ebuls
+ for myebul in all(ebuls) do
+  move(myebul)
+  animate(myebul)
+  if myebul.y>128 or myebul.x<-8 or myebul.x>128 or myebul.y<-8 then
+   del(ebuls,myebul)
+  end
+ end 
  
  --moving enemies 
  for myen in all(enemies) do
@@ -404,12 +425,8 @@ function update_game()
   doenemy(myen)
   
   --enemy animation
-  myen.aniframe+=myen.anispd
-  if flr(myen.aniframe) > #myen.ani then
-   myen.aniframe=1
-  end
-  myen.spr=myen.ani[flr(myen.aniframe)]
-  
+  animate(myen)
+    
   --enemy leaving screen
   if myen.mission!="flyin" then 
    if myen.y>128 or myen.x<-8 or myen.x>128 then
@@ -430,10 +447,7 @@ function update_game()
     myen.flash=2
     
     if myen.hp<=0 then
-     del(enemies,myen)   
-     sfx(2)
-     score+=1
-     explode(myen.x+4,myen.y+4)     
+     killen(myen)
     end
    end
   end
@@ -453,6 +467,18 @@ function update_game()
   invul-=1
  end
  
+ --collision ship x ebuls
+ if invul<=0 then
+	 for myebul in all(ebuls) do
+	  if col(myebul,ship) then
+    explode(ship.x+4,ship.y+4,true)
+	   lives-=1
+	   sfx(1)
+	   invul=60
+	  end
+	 end
+ end
+ 
  if lives<=0 then
   mode="over"
   lockout=t+30
@@ -461,7 +487,7 @@ function update_game()
  end
  
  --picking
- picking()
+ picktimer()
  
  --animate flame
  flamespr=flamespr+1
@@ -620,7 +646,11 @@ function draw_game()
     del(parts,myp)
    end
   end
-  
+ end
+ 
+ --drawing ebuls
+ for myebul in all(ebuls) do
+  drwmyspr(myebul)
  end
  
  print("score:"..score,40,1,12)
@@ -859,32 +889,95 @@ function doenemy(myen)
   
 end
 
-function picking()
+function picktimer()
  if mode!="game" then
   return
  end
- 
- if t%attacfreq==0 then
-  local maxnum=min(10,#enemies)
-  local myindex=flr(rnd(maxnum))
-  
-  myindex=#enemies-myindex
-  
-  local myen=enemies[myindex]
-  
-  if myen.mission=="protec" then
-   myen.mission="attac"
-   myen.anispd*=3
-   myen.wait=60
-   myen.shake=60
-  end
+
+ if t>nextfire then
+  pickfire()
+  nextfire=t+20+rnd(20)
  end
  
+ if t%attacfreq==0 then
+  pickattac()
+ end
 end
+
+function pickattac()
+ local maxnum=min(10,#enemies)
+ local myindex=flr(rnd(maxnum))
+ 
+ myindex=#enemies-myindex
+ local myen=enemies[myindex]
+ if myen==nil then return end
+ 
+ if myen.mission=="protec" then
+  myen.mission="attac"
+  myen.anispd*=3
+  myen.wait=60
+  myen.shake=60
+ end
+end
+
+function pickfire()
+ local maxnum=min(10,#enemies)
+ local myindex=flr(rnd(maxnum))
+ 
+ myindex=#enemies-myindex
+ local myen=enemies[myindex]
+ if myen==nil then return end
+ 
+ if myen.mission=="protec" then
+  fire(myen)
+ end
+end
+
 
 function move(obj)
  obj.x+=obj.sx
  obj.y+=obj.sy
+end
+
+function killen(myen)
+ del(enemies,myen)   
+ sfx(2)
+ score+=1
+ explode(myen.x+4,myen.y+4)
+ 
+ if myen.mission=="attac" then
+  if rnd()<0.5 then
+   pickattac()
+  end
+ end
+end
+
+function animate(myen)
+ myen.aniframe+=myen.anispd
+ if flr(myen.aniframe) > #myen.ani then
+  myen.aniframe=1
+ end
+ myen.spr=myen.ani[flr(myen.aniframe)]
+end
+-->8
+--bullets
+
+function fire(myen)
+ local myebul=makespr()
+ myebul.x=myen.x+3
+ myebul.y=myen.y+6
+ myebul.spr=32
+ myebul.ani={32,33,34,33}
+ myebul.anispd=0.5
+ myebul.sy=2
+ 
+ myebul.colw=2
+ myebul.colh=2
+ myebul.bulmode=true
+ 
+ myen.flash=4
+ add(ebuls,myebul)
+ sfx(29)
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
@@ -903,12 +996,12 @@ __gfx__
 99aa99009aa77aa90000000000000000000000000037730000377300003773000037730000000000000000000000000000000000000000000000000000000000
 09aa900009aaaa900000000000000000000000000303303003033030030330300303303000000000000000000000000000000000000000000000000000000000
 00990000009999000000000000000000000000000300003030000003030000300330033000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00ee000000ee00000077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0e22e0000e88e00007cc700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+e2e82e00e87e8e007c77c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+e2882e00e8ee8e007c77c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0e22e0000e88e00007cc700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00ee000000ee00000077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1036,6 +1129,7 @@ __sfx__
 010c00000175001750017500175001750017500175001750037500375003750037500375003750037500375006750067500675006750067500675006750067500575005750057500575005750057500575005750
 010c00001d55024500245001b55519555245001e550245002450029500165502450024500245001e550245001e55024500245001d5551b555245001d5502450024500295001855024500275002a5002950028500
 11050000385623555233552315522f5522d5522b5522954227552265522355222552215521e5421d5421a5421854217542155421454212542105420e5420d5320b53209522075120551203512015120051200512
+48020000173520f302113420932208322073200735000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
 __music__
 04 04050644
 00 07084749
