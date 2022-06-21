@@ -23,7 +23,7 @@ function _init()
  blinkt=1
  t=0
  lockout=0
- 
+ shake=128
 end
 
 function _update() 
@@ -47,6 +47,8 @@ end
 
 function _draw()
 
+ doshake()
+ 
  if mode=="game" then
   draw_game()
  elseif mode=="start" then
@@ -59,6 +61,8 @@ function _draw()
   draw_win()
  end
  
+ camera()
+ print(shake,2,2,7)
 end
 
 function startscreen()
@@ -68,7 +72,7 @@ end
 
 function startgame()
  t=0
- wave=3
+ wave=1
  nextwave()
  
  ship=makespr()
@@ -86,7 +90,7 @@ function startgame()
  
  score=0
  
- lives=1
+ lives=4
  invul=0
  
  attacfreq=60
@@ -191,7 +195,7 @@ function col(a,b)
 end
 
 function explode(expx,expy,isblue)
-
+ 
  local myp={}
  myp.x=expx
  myp.y=expy
@@ -347,6 +351,23 @@ function makespr()
  
  return myspr
 end
+
+function doshake()
+
+ local shakex=rnd(shake)-(shake/2)
+ local shakey=rnd(shake)-(shake/2)
+ 
+ camera(shakex,shakey)
+ 
+ if shake>10 then
+  shake*=0.9
+ else
+  shake-=1
+  if shake<1 then
+   shake=0
+  end
+ end
+end
 -->8
 --update
 
@@ -464,6 +485,7 @@ function update_game()
     explode(ship.x+4,ship.y+4,true)
 	   lives-=1
 	   sfx(1)
+	   shake=12
 	   invul=60
 	  end
 	 end
@@ -477,6 +499,7 @@ function update_game()
 	  if col(myebul,ship) then
     explode(ship.x+4,ship.y+4,true)
 	   lives-=1
+	   shake=12
 	   sfx(1)
 	   invul=60
 	  end
@@ -888,8 +911,8 @@ function doenemy(myen)
     myen.sy=1
    else
     
-    if t%30==0 then
-     firespread(myen,8,1,rnd())
+    if t%25==0 then
+     firespread(myen,8,1.3,rnd())
     end
    end
   end
@@ -939,7 +962,15 @@ function pickfire()
  if myen==nil then return end
  
  if myen.mission=="protec" then
-  fire(myen,0,2)
+  if myen.type==4 then
+   --yellow guy
+   firespread(myen,8,1.3,rnd())
+  elseif myen.type==2 then
+   --red guy
+   aimedfire(myen,2)
+  else
+   fire(myen,0,2)
+  end
  end
 end
 
@@ -996,6 +1027,7 @@ function fire(myen,ang,spd)
  myen.flash=4
  add(ebuls,myebul)
  sfx(29)
+ return myebul
 end
 
 function firespread(myen,num,spd,base)
@@ -1005,7 +1037,16 @@ function firespread(myen,num,spd,base)
  for i=1,num do
   fire(myen,1/num*i+base,spd)
  end
+end
 
+function aimedfire(myen,spd)
+ local myebul=fire(myen,0,spd)
+ 
+ local ang=atan2((ship.y+4)-myebul.y,(ship.x+4)-myebul.x)
+
+ myebul.sx=sin(ang)*spd
+ myebul.sy=cos(ang)*spd 
+ 
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
