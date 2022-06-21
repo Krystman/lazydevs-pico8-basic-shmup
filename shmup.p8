@@ -79,6 +79,8 @@ function startgame()
  
  lives=1
  invul=0
+ 
+ attacfreq=60
 
  stars={} 
  for i=1,100 do
@@ -141,7 +143,15 @@ function blink()
 end
 
 function drwmyspr(myspr)
- spr(myspr.spr,myspr.x,myspr.y,myspr.sprw,myspr.sprh)
+ local sprx=myspr.x
+ local spry=myspr.y
+ 
+ if myspr.shake>0 then
+  myspr.shake-=1
+  sprx+=abs(sin(t/2.5))
+ end
+ 
+ spr(myspr.spr,sprx,spry,myspr.sprw,myspr.sprh)
 end
 
 function col(a,b)
@@ -305,13 +315,19 @@ function makespr()
  local myspr={}
  myspr.x=0
  myspr.y=0
+ myspr.sx=0
+ myspr.sy=0
+ 
  myspr.flash=0
+ myspr.shake=0
+ 
  myspr.aniframe=1
  myspr.spr=0
  myspr.sprw=1
  myspr.sprh=1
  myspr.colw=8
  myspr.colh=8
+ 
  return myspr
 end
 -->8
@@ -388,15 +404,17 @@ function update_game()
   doenemy(myen)
   
   --enemy animation
-  myen.aniframe+=0.4
+  myen.aniframe+=myen.anispd
   if flr(myen.aniframe) > #myen.ani then
    myen.aniframe=1
   end
   myen.spr=myen.ani[flr(myen.aniframe)]
   
   --enemy leaving screen
-  if myen.y>128 then
-   del(enemies,myen)
+  if myen.mission!="flyin" then 
+   if myen.y>128 or myen.x<-8 or myen.x>128 then
+    del(enemies,myen)
+   end
   end
  end
  
@@ -647,7 +665,10 @@ end
 
 function spawnwave()
  sfx(28)
+ 
+ 
  if wave==1 then
+  attacfreq=60
   placens({
    {1,1,1,1,1,1,1,1,1,1},
    {1,1,1,1,1,1,1,1,1,1},
@@ -655,6 +676,7 @@ function spawnwave()
    {1,1,1,1,1,1,1,1,1,1}
   })
  elseif wave==2 then
+  attacfreq=60
   placens({
    {1,1,2,2,1,1,2,2,1,1},
    {1,1,2,2,1,1,2,2,1,1},
@@ -662,6 +684,7 @@ function spawnwave()
    {1,1,2,2,2,2,2,2,1,1}
   })
  elseif wave==3 then
+  attacfreq=60
   placens({
    {3,3,0,2,2,2,2,0,3,3},
    {3,3,0,2,2,2,2,0,3,3},
@@ -669,6 +692,7 @@ function spawnwave()
    {3,3,0,1,0,0,1,0,3,3}
   })
  elseif wave==4 then
+  attacfreq=60
   placens({
    {0,0,0,0,0,0,0,0,0,0},
    {0,0,0,0,4,0,0,0,0,0},
@@ -719,8 +743,12 @@ function spawnen(entype,enx,eny,enwait)
  myen.posx=enx
  myen.posy=eny
  
+ myen.type=entype
+ 
  myen.wait=enwait
 
+ myen.anispd=0.4
+ 
  myen.mission="flyin"
  
  if entype==nil or entype==1 then
@@ -777,9 +805,56 @@ function doenemy(myen)
   -- staying put
   
  elseif myen.mission=="attac" then  
-  -- attac 
-  myen.y+=1.7
+  -- attac
+  if myen.type==1 then
+   --green guy
+   myen.sy=1.7
+   myen.sx=sin(t/45)
+   
+   -- just tweaks
+   if myen.x<32 then
+    myen.sx+=1-(myen.x/32)
+   end
+   if myen.x>88 then
+    myen.sx-=(myen.x-88)/32
+   end
+  elseif myen.type==2 then
+   --red guy
+   myen.sy=2.5
+   myen.sx=sin(t/20)
+   
+   -- just tweaks
+   if myen.x<32 then
+    myen.sx+=1-(myen.x/32)
+   end
+   if myen.x>88 then
+    myen.sx-=(myen.x-88)/32
+   end   
+   
+  elseif myen.type==3 then
+   --spinny ship
+   if myen.sx==0 then
+    --flying down
+    myen.sy=2
+    if ship.y<=myen.y then
+     myen.sy=0
+     if ship.x<myen.x then
+      myen.sx=-2
+     else
+      myen.sx=2
+     end
+    end
+   end
+   
+  elseif myen.type==4 then
+   --yellow ship
+   myen.sy=0.35
+   if myen.y>110 then
+    myen.sy=1
+   end
+  end
   
+  move(myen)
  end
   
 end
@@ -789,13 +864,27 @@ function picking()
   return
  end
  
- if t%60==0 then
-  local myen=rnd(enemies)
+ if t%attacfreq==0 then
+  local maxnum=min(10,#enemies)
+  local myindex=flr(rnd(maxnum))
+  
+  myindex=#enemies-myindex
+  
+  local myen=enemies[myindex]
+  
   if myen.mission=="protec" then
    myen.mission="attac"
+   myen.anispd*=3
+   myen.wait=60
+   myen.shake=60
   end
  end
  
+end
+
+function move(obj)
+ obj.x+=obj.sx
+ obj.y+=obj.sy
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
