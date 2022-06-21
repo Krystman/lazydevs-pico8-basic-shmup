@@ -3,16 +3,15 @@ version 36
 __lua__
 -- todo
 -- ------------
--- enemy bullets
--- -aimed bullets
--- -spread shots
+-- creating new levels
 
 -- pickups
 -- bomb?
 
+-- scoring
+
 -- boss
 
--- scoring
 -- nicer screens
 
 function _init()
@@ -23,7 +22,7 @@ function _init()
  blinkt=1
  t=0
  lockout=0
- shake=128
+ shake=0
 end
 
 function _update() 
@@ -62,7 +61,6 @@ function _draw()
  end
  
  camera()
- print(shake,2,2,7)
 end
 
 function startscreen()
@@ -72,7 +70,8 @@ end
 
 function startgame()
  t=0
- wave=1
+ wave=0
+ lastwave=9
  nextwave()
  
  ship=makespr()
@@ -89,6 +88,7 @@ function startgame()
  muzzle=0
  
  score=0
+ cher=0
  
  lives=4
  invul=0
@@ -113,7 +113,8 @@ function startgame()
  parts={}
  
  shwaves={}
-
+ 
+ pickups={}
 end
 
 -->8
@@ -155,6 +156,13 @@ function blink()
  end
 
  return banim[blinkt]
+end
+
+function drwoutline(myspr)
+ spr(myspr.spr,myspr.x+1,myspr.y,myspr.sprw,myspr.sprh)
+ spr(myspr.spr,myspr.x-1,myspr.y,myspr.sprw,myspr.sprh)
+ spr(myspr.spr,myspr.x,myspr.y+1,myspr.sprw,myspr.sprh)
+ spr(myspr.spr,myspr.x,myspr.y-1,myspr.sprw,myspr.sprh)
 end
 
 function drwmyspr(myspr)
@@ -291,13 +299,16 @@ function page_blue(page)
  return col
 end
 
-function smol_shwave(shx,shy)
+function smol_shwave(shx,shy,shcol)
+ if shcol==nil then
+  shcol=9
+ end 
  local mysw={}
  mysw.x=shx
  mysw.y=shy
  mysw.r=3
  mysw.tr=6
- mysw.col=9
+ mysw.col=shcol
  mysw.speed=1
  add(shwaves,mysw)
 end
@@ -444,6 +455,14 @@ function update_game()
   end
  end 
  
+ --move the pickups
+ for mypick in all(pickups) do
+  move(mypick)
+  if mypick.y>128 then
+   del(pickups,mypick)
+  end
+ end 
+ 
  --moving enemies 
  for myen in all(enemies) do
   --enemy mission
@@ -505,6 +524,17 @@ function update_game()
 	  end
 	 end
  end
+ 
+ --collision pickup x ship
+ for mypick in all(pickups) do
+  if col(mypick,ship) then
+   del(pickups,mypick)
+   cher+=1
+   sfx(30)
+   smol_shwave(mypick.x+4,mypick.y+4,14)
+  end
+ end
+ 
  
  if lives<=0 then
   mode="over"
@@ -612,6 +642,20 @@ function draw_game()
 	 end
  end
  
+ --drawing pickups
+ for mypick in all(pickups) do
+  local mycol=7
+  if t%4<2 then
+   mycol=14
+  end
+  for i=1,15 do
+   pal(i,mycol)
+  end
+  drwoutline(mypick)
+  pal()
+  drwmyspr(mypick)
+ end
+ 
  --drawing enemies
  for myen in all(enemies) do
   if myen.flash>0 then
@@ -689,6 +733,9 @@ function draw_game()
    spr(14,i*9-8,1)
   end 
  end
+
+ spr(48,108,1)
+ print(cher,118,2,14)
  
  --print(#buls,5,5,7)
 end
@@ -723,16 +770,17 @@ end
 function spawnwave()
  sfx(28)
  
- 
  if wave==1 then
+  --space invaders
   attacfreq=60
   placens({
-   {1,1,1,1,1,1,1,1,1,1},
-   {1,1,1,1,1,1,1,1,1,1},
-   {1,1,1,1,1,1,1,1,1,1},
-   {1,1,1,1,1,1,1,1,1,1}
+   {0,1,1,1,1,1,1,1,1,0},
+   {0,1,1,1,1,1,1,1,1,0},
+   {0,1,1,1,1,1,1,1,1,0},
+   {0,1,1,1,1,1,1,1,1,0}
   })
  elseif wave==2 then
+  --red tutorial
   attacfreq=60
   placens({
    {1,1,2,2,1,1,2,2,1,1},
@@ -741,14 +789,62 @@ function spawnwave()
    {1,1,2,2,2,2,2,2,1,1}
   })
  elseif wave==3 then
+  --wall of red
   attacfreq=60
   placens({
-   {3,3,0,2,2,2,2,0,3,3},
-   {3,3,0,2,2,2,2,0,3,3},
-   {3,3,0,1,1,1,1,0,3,3},
-   {3,3,0,1,0,0,1,0,3,3}
+   {1,1,2,2,1,1,2,2,1,1},
+   {1,1,2,2,2,2,2,2,1,1},
+   {2,2,2,2,2,2,2,2,2,2},
+   {2,2,2,2,2,2,2,2,2,2}
   })
  elseif wave==4 then
+  --spin tutorial
+  attacfreq=60
+  placens({
+   {3,3,0,1,1,1,1,0,3,3},
+   {3,3,0,1,1,1,1,0,3,3},
+   {3,3,0,1,1,1,1,0,3,3},
+   {3,3,0,1,1,1,1,0,3,3}
+  })
+ elseif wave==5 then
+  --chess
+  attacfreq=60
+  placens({
+   {3,1,3,1,2,2,1,3,1,3},
+   {1,3,1,2,1,1,2,1,3,1},
+   {3,1,3,1,2,2,1,3,1,3},
+   {1,3,1,2,1,1,2,1,3,1}
+  })
+ elseif wave==6 then
+  --yellow tutorial
+  attacfreq=60
+  placens({
+   {1,1,1,0,4,0,0,1,1,1},
+   {1,1,0,0,0,0,0,0,1,1},
+   {1,1,0,1,1,1,1,0,1,1},
+   {1,1,0,1,1,1,1,0,1,1}
+  })
+  
+ elseif wave==7 then
+  --double yellow
+  attacfreq=60
+  placens({
+   {3,3,0,1,1,1,1,0,3,3},
+   {4,0,0,2,2,2,2,0,4,0},
+   {0,0,0,2,1,1,2,0,0,0},
+   {1,1,0,1,1,1,1,0,1,1}
+  })
+ elseif wave==8 then
+  --hell
+  attacfreq=60
+  placens({
+   {0,0,1,1,1,1,1,1,0,0},
+   {3,3,1,1,1,1,1,1,3,3},
+   {3,3,2,2,2,2,2,2,3,3},
+   {3,3,2,2,2,2,2,2,3,3}
+  })
+ elseif wave==9 then
+  --boss
   attacfreq=60
   placens({
    {0,0,0,0,0,0,0,0,0,0},
@@ -775,7 +871,7 @@ end
 function nextwave()
  wave+=1
  
- if wave>4 then
+ if wave>lastwave then
   mode="win"
   lockout=t+30
   music(4)
@@ -811,22 +907,22 @@ function spawnen(entype,enx,eny,enwait)
  if entype==nil or entype==1 then
   -- green alien
   myen.spr=21
-  myen.hp=1
+  myen.hp=3
   myen.ani={21,22,23,24}
  elseif entype==2 then
   -- red flame guy
   myen.spr=148
-  myen.hp=1
+  myen.hp=2
   myen.ani={148,149}
  elseif entype==3 then
   -- spinning ship
   myen.spr=184
-  myen.hp=1
+  myen.hp=4
   myen.ani={184,185,186,187}
  elseif entype==4 then
-  -- boss
+  -- yellow guy
   myen.spr=208
-  myen.hp=1
+  myen.hp=20
   myen.ani={208,210}
   myen.sprw=2
   myen.sprh=2
@@ -957,6 +1053,15 @@ function pickfire()
  local maxnum=min(10,#enemies)
  local myindex=flr(rnd(maxnum))
  
+ for myen in all(enemies) do
+  if myen.type==4 and myen.mission=="protec" then
+   if rnd()<0.5 then
+    firespread(myen,12,1.3,rnd())
+    return
+   end
+  end
+ end
+ 
  myindex=#enemies-myindex
  local myen=enemies[myindex]
  if myen==nil then return end
@@ -964,7 +1069,7 @@ function pickfire()
  if myen.mission=="protec" then
   if myen.type==4 then
    --yellow guy
-   firespread(myen,8,1.3,rnd())
+   firespread(myen,12,1.3,rnd())
   elseif myen.type==2 then
    --red guy
    aimedfire(myen,2)
@@ -986,11 +1091,24 @@ function killen(myen)
  score+=1
  explode(myen.x+4,myen.y+4)
  
+ if rnd()<0.15 then
+  dropickup(myen.x,myen.y)
+ end
+ 
  if myen.mission=="attac" then
   if rnd()<0.5 then
    pickattac()
   end
  end
+end
+
+function dropickup(pix,piy)
+ local mypick=makespr()
+ mypick.x=pix
+ mypick.y=piy
+ mypick.sy=0.5
+ mypick.spr=48
+ add(pickups,mypick)
 end
 
 function animate(myen)
@@ -1073,14 +1191,14 @@ e2882e00e8ee8e007c77c70000000000000000000000000000000000000000000000000000000000
 00ee000000ee00000077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000bbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000b0bb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00b00b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00b00880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+08808788000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+87880888000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88880880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+08800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000099900000000005555555505000000005050550000000000500000000000000000000000000000000000000000000000000000000
 00000000070000000000999999900000050055222222500000050055555250000000000555050000000000000000000000000000000000000000000000000000
@@ -1199,6 +1317,7 @@ __sfx__
 010c00001d55024500245001b55519555245001e550245002450029500165502450024500245001e550245001e55024500245001d5551b555245001d5502450024500295001855024500275002a5002950028500
 11050000385623555233552315522f5522d5522b5522954227552265522355222552215521e5421d5421a5421854217542155421454212542105420e5420d5320b53209522075120551203512015120051200512
 48020000173520f302113420932208322073200735000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
+080400001357617576195362055622566275762c576325763655632556275361f5261951617500125002a50027500005000050000500005000050000500005000050000500005000050000500005000050000500
 __music__
 04 04050644
 00 07084749
