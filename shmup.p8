@@ -3,9 +3,7 @@ version 36
 __lua__
 -- todo
 -- ------------
--- creating new levels
 
--- pickups
 -- bomb?
 
 -- scoring
@@ -88,9 +86,9 @@ function startgame()
  muzzle=0
  
  score=0
- cher=0
+ cher=8
  
- lives=4
+ lives=3
  invul=0
  
  attacfreq=60
@@ -115,6 +113,8 @@ function startgame()
  shwaves={}
  
  pickups={}
+ 
+ floats={}
 end
 
 -->8
@@ -379,6 +379,19 @@ function doshake()
   end
  end
 end
+
+function popfloat(fltxt,flx,fly)
+ local fl={}
+ fl.x=flx
+ fl.y=fly
+ fl.txt=fltxt
+ fl.age=0
+ add(floats,fl)
+end
+
+function cprint(txt,x,y,c)
+ print(txt,x-#txt*2,y,c)
+end
 -->8
 --update
 
@@ -403,6 +416,15 @@ function update_game()
   ship.sy=2
  end
   
+ if btnp(4) then
+  if cher>0 then
+   cherbomb(cher)
+   cher=0
+  else
+   sfx(32)
+  end
+ end
+ 
  if btn(5) then
   if bultimer<=0 then
 	  local newbul=makespr()
@@ -411,6 +433,7 @@ function update_game()
 	  newbul.spr=16
 	  newbul.colw=6
 	  newbul.sy=-4
+	  newbul.dmg=1
 	  add(buls,newbul)
 	  
 	  sfx(0)
@@ -486,7 +509,7 @@ function update_game()
     del(buls,mybul)
     smol_shwave(mybul.x+4,mybul.y+4)
     smol_spark(myen.x+4,myen.y+4)
-    myen.hp-=1
+    myen.hp-=mybul.dmg
     sfx(3)
     myen.flash=2
     
@@ -529,9 +552,7 @@ function update_game()
  for mypick in all(pickups) do
   if col(mypick,ship) then
    del(pickups,mypick)
-   cher+=1
-   sfx(30)
-   smol_shwave(mypick.x+4,mypick.y+4,14)
+   plogic(mypick)
   end
  end
  
@@ -724,6 +745,20 @@ function draw_game()
   drwmyspr(myebul)
  end
  
+ --floats
+ for myfl in all(floats) do
+  local mycol=7
+  if t%4<2 then
+   mycol=8
+  end
+  cprint(myfl.txt,myfl.x,myfl.y,mycol)
+  myfl.y-=0.5
+  myfl.age+=1
+  if myfl.age>60 then
+   del(floats,myfl)
+  end
+ end
+ 
  print("score:"..score,40,1,12)
  
  for i=1,4 do
@@ -744,25 +779,25 @@ function draw_start()
  --print(blink())
 
  cls(1) 
- print("my awesome shmup",34,40,12) 
- print("press any key to start",20,80,blink())
+ cprint("my awesome shmup",64,40,12) 
+ cprint("press any key to start",64,80,blink())
 end
 
 function draw_over()
  draw_game()
- print("game over",47,40,8) 
- print("press any key to continue",16,80,blink())
+ cprint("game over",64,40,8) 
+ cprint("press any key to continue",64,80,blink())
 end
 
 function draw_win()
  draw_game()
- print("congratulations",35,40,12)
- print("press any key to continue",16,80,blink())
+ cprint("congratulations",64,40,12)
+ cprint("press any key to continue",64,80,blink())
 end
 
 function draw_wavetext()
  draw_game()
- print("wave "..wave,56,40,blink())
+ cprint("wave "..wave,64,40,blink())
 end
 -->8
 -- waves and enemies
@@ -1090,15 +1125,18 @@ function killen(myen)
  sfx(2)
  score+=1
  explode(myen.x+4,myen.y+4)
- 
- if rnd()<0.15 then
-  dropickup(myen.x,myen.y)
- end
+ local cherchance=0.1
  
  if myen.mission=="attac" then
   if rnd()<0.5 then
    pickattac()
   end
+  cherchance=0.2
+  popfloat("100",myen.x+4,myen.y+4)
+ end
+ 
+ if rnd()<cherchance then
+  dropickup(myen.x,myen.y)
  end
 end
 
@@ -1106,9 +1144,29 @@ function dropickup(pix,piy)
  local mypick=makespr()
  mypick.x=pix
  mypick.y=piy
- mypick.sy=0.5
+ mypick.sy=0.75
  mypick.spr=48
  add(pickups,mypick)
+end
+
+function plogic(mypick)
+ cher+=1
+ smol_shwave(mypick.x+4,mypick.y+4,14)
+ if cher>=10 then
+  --get a life
+  if lives<4 then
+   lives+=1
+   sfx(31)
+   cher=0
+   popfloat("1up!",mypick.x+4,mypick.y+4)
+  else
+   --points
+   score+=10
+   cher=0
+  end
+ else
+  sfx(30)
+ end
 end
 
 function animate(myen)
@@ -1164,6 +1222,32 @@ function aimedfire(myen,spd)
 
  myebul.sx=sin(ang)*spd
  myebul.sy=cos(ang)*spd 
+end
+
+function cherbomb(cher)
+ local spc=0.25/(cher*2)
+ 
+ for i=0,cher*2 do
+  local ang=0.375+spc*i
+  
+  local newbul=makespr()
+  newbul.x=ship.x
+  newbul.y=ship.y-3
+  newbul.spr=17
+  newbul.dmg=3
+  
+  newbul.sx=sin(ang)*4
+  newbul.sy=cos(ang)*4
+ 
+  add(buls,newbul)
+ end
+ 
+ big_shwave(ship.x+3,ship.y+3)
+ shake=5
+ muzzle=5
+ invul=30
+
+ sfx(33)
  
 end
 __gfx__
@@ -1317,7 +1401,10 @@ __sfx__
 010c00001d55024500245001b55519555245001e550245002450029500165502450024500245001e550245001e55024500245001d5551b555245001d5502450024500295001855024500275002a5002950028500
 11050000385623555233552315522f5522d5522b5522954227552265522355222552215521e5421d5421a5421854217542155421454212542105420e5420d5320b53209522075120551203512015120051200512
 48020000173520f302113420932208322073200735000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
-080400001357617576195362055622566275762c576325763655632556275361f5261951617500125002a50027500005000050000500005000050000500005000050000500005000050000500005000050000500
+080c000013056170661c06620066220362905631036320063600632006270061f0061900617000120002a00027000000000000000000000000000000000000000000000000000000000000000000000000000000
+000a0000070560c0660f07616076180661f056220472703733037330573c0673e0062b00625006200061b0061700614006110060f0060d0060c0060a006090060600606006050060500600000000000000000000
+000400000744007420074200a40000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
+4a0200002c6412f66130661316613766132661326612b6612866125671226611e661146611a651166510864111641056410c64105641046410264102631026310163101621006210062100611006110061100611
 __music__
 04 04050644
 00 07084749
