@@ -3,13 +3,9 @@ version 36
 __lua__
 -- todo
 -- ------------
--- nicer screens
--- flexible collision detection
-
--- even more enemies
 -- enemy behavior
--- where do enemies spawn?
 -- enemy bullets
+-- nicer screens
 
 function _init()
  --this will clear the screen
@@ -446,6 +442,8 @@ function update_game()
   return
  end
  
+ --picking
+ picking()
  
  --animate flame
  flamespr=flamespr+1
@@ -622,8 +620,8 @@ end
 
 function draw_start()
  --print(blink())
- cls(1)
- 
+
+ cls(1) 
  print("my awesome shmup",34,40,12) 
  print("press any key to start",20,80,blink())
 end
@@ -648,12 +646,13 @@ end
 -- waves and enemies
 
 function spawnwave()
+ sfx(28)
  if wave==1 then
   placens({
-   {0,1,1,1,1,1,1,1,1,0},
-   {0,1,1,1,1,1,1,1,1,0},
-   {0,1,1,1,1,1,1,1,1,0},
-   {0,1,1,1,1,1,1,1,1,0}
+   {1,1,1,1,1,1,1,1,1,1},
+   {1,1,1,1,1,1,1,1,1,1},
+   {1,1,1,1,1,1,1,1,1,1},
+   {1,1,1,1,1,1,1,1,1,1}
   })
  elseif wave==2 then
   placens({
@@ -685,7 +684,7 @@ function placens(lvl)
   local myline=lvl[y]
   for x=1,10 do
    if myline[x]!=0 then
-    spawnen(myline[x],x*12-6,4+y*12)
+    spawnen(myline[x],x*12-6,4+y*12,x*3)
    end
   end
  end
@@ -712,13 +711,15 @@ function nextwave()
 
 end
 
-function spawnen(entype,enx,eny)
+function spawnen(entype,enx,eny,enwait)
  local myen=makespr()
- myen.x=enx
+ myen.x=enx*1.25-16
  myen.y=eny-66
  
  myen.posx=enx
  myen.posy=eny
+ 
+ myen.wait=enwait
 
  myen.mission="flyin"
  
@@ -754,19 +755,47 @@ end
 --behavior
 
 function doenemy(myen)
+ if myen.wait>0 then
+  myen.wait-=1
+  return
+ end
+ 
  if myen.mission=="flyin" then
   --flying in
-  myen.y+=1
-  if myen.y>=myen.posy then
+  --basic easing function
+  --x+=(targetx-x)/n
+  
+  myen.x+=(myen.posx-myen.x)/7
+  myen.y+=(myen.posy-myen.y)/7
+  
+  if abs(myen.y-myen.posy)<0.7 then
+   myen.y=myen.posy
    myen.mission="protec"
   end
   
  elseif myen.mission=="protec" then
   -- staying put
+  
  elseif myen.mission=="attac" then  
   -- attac 
+  myen.y+=1.7
+  
  end
   
+end
+
+function picking()
+ if mode!="game" then
+  return
+ end
+ 
+ if t%60==0 then
+  local myen=rnd(enemies)
+  if myen.mission=="protec" then
+   myen.mission="attac"
+  end
+ end
+ 
 end
 __gfx__
 00000000000220000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000088008800880088000000000
@@ -917,6 +946,7 @@ __sfx__
 510c0000143151931520325143251931520315163251932516315183151932516325183151931516325183251b3151e315183251b3251e315183151b3251e325183151b3151d325183251b3151d315183251b325
 010c00000175001750017500175001750017500175001750037500375003750037500375003750037500375006750067500675006750067500675006750067500575005750057500575005750057500575005750
 010c00001d55024500245001b55519555245001e550245002450029500165502450024500245001e550245001e55024500245001d5551b555245001d5502450024500295001855024500275002a5002950028500
+11050000385623555233552315522f5522d5522b5522954227552265522355222552215521e5421d5421a5421854217542155421454212542105420e5420d5320b53209522075120551203512015120051200512
 __music__
 04 04050644
 00 07084749
